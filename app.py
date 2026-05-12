@@ -5,10 +5,10 @@ import numpy as np
 import json
 import os
 
-st.set_page_config(page_title="Value Bot v5.3", layout="wide")
+st.set_page_config(page_title="Value Bot v5.4", layout="wide")
 
-st.title("⚽ Betting Bot v5.3 PRO + Kelly")
-st.markdown("Plná nálož trhů. Opravené mizení výsledků při zadávání kurzů.")
+st.title("⚽ Betting Bot v5.4 PRO + Kelly")
+st.markdown("Plná nálož trhů. Spolehlivé live aktualizace pro mobil.")
 
 # --- 1. FUNKCE PRO PAMĚŤ BANKROLLU ---
 BANKROLL_FILE = "bankroll_settings.json"
@@ -34,7 +34,7 @@ def smart_float_input(label, default_val, key):
     except ValueError:
         return float(default_val)
 
-# --- INICIALIZACE SESSION STATE (PAMĚŤ PRO VÝSLEDKY) ---
+# --- INICIALIZACE SESSION STATE ---
 if "show_results" not in st.session_state:
     st.session_state.show_results = False
 
@@ -43,18 +43,27 @@ with st.sidebar:
     st.header("💰 Bankroll Management")
     
     saved_bank = load_bankroll()
-    bankroll = st.number_input("Tvůj celkový bankroll (Kč)", min_value=0, value=int(saved_bank), step=500)
+    # Přidán klíč (key) pro bankroll
+    bankroll = st.number_input("Tvůj celkový bankroll (Kč)", min_value=0, value=int(saved_bank), step=500, key="bankroll_input")
     
     if bankroll != saved_bank:
         save_bankroll(bankroll)
         
-    kelly_fraction = st.select_slider(
-        "Agresivita (Kelly Fraction)",
-        options=[0.125, 0.25, 0.5, 1.0],
-        value=0.25,
-        help="1/8 Kelly (konzervativní), 1/4 Kelly (standard), 1/2 Kelly (agresivní), Full Kelly (riskantní)"
+    # Výměna slideru za spolehlivější selectbox s jasnými popisky
+    kelly_options = {
+        0.125: "1/8 Kelly (Konzervativní)",
+        0.25: "1/4 Kelly (Standard - Doporučeno)",
+        0.5: "1/2 Kelly (Agresivní)",
+        1.0: "Full Kelly (Riskantní)"
+    }
+    
+    kelly_fraction = st.selectbox(
+        "Agresivita sázek",
+        options=list(kelly_options.keys()),
+        format_func=lambda x: kelly_options[x],
+        index=1,
+        key="kelly_selectbox"
     )
-    st.caption("Doporučeno: 0.25 (1/4 Kelly) pro dlouhodobou udržitelnost.")
 
 # --- 3. FUNKCE PRO VSTUP DAT ---
 def match_history_input(team_label):
@@ -116,10 +125,8 @@ with col2:
         away_data = match_history_input("Hosté")
 
 if st.button("MAGICKÝ VÝPOČET VALUE & KELLY", type="primary", use_container_width=True):
-    # Zapíšeme do paměti, že chceme ukázat výsledky
     st.session_state.show_results = True
 
-# Výsledky se ukážou, pokud jsou zapnuté v session_state
 if st.session_state.show_results:
     home_lambda = ((home_data["xg"] * 0.7 + home_data["gf"] * 0.3) + (away_data["xga"] * 0.7 + away_data["ga"] * 0.3)) / 2
     away_lambda = ((away_data["xg"] * 0.7 + away_data["gf"] * 0.3) + (home_data["xga"] * 0.7 + home_data["ga"] * 0.3)) / 2
