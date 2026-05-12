@@ -2,25 +2,61 @@ import streamlit as st
 import scipy.stats as stats
 import pandas as pd
 import numpy as np
+import json
+import os
 
-st.set_page_config(page_title="Value Bot v5.0", layout="wide")
+st.set_page_config(page_title="Value Bot v5.1", layout="wide")
 
-st.title("⚽ Betting Bot v5.0 PRO + Kelly")
-st.markdown("Kompletní analytický nástroj s Kellyho kritériem a Time Decay.")
+st.title("⚽ Betting Bot v5.1 PRO + Kelly")
+st.markdown("Optimalizováno pro mobil. Podpora čárek (,) a automatické ukládání bankrollu.")
+
+# --- 1. FUNKCE PRO PAMĚŤ BANKROLLU ---
+BANKROLL_FILE = "bankroll_settings.json"
+
+def load_bankroll():
+    if os.path.exists(BANKROLL_FILE):
+        try:
+            with open(BANKROLL_FILE, "r") as f:
+                return json.load(f).get("bankroll", 10000)
+        except:
+            return 10000
+    return 10000
+
+def save_bankroll(val):
+    with open(BANKROLL_FILE, "w") as f:
+        json.dump({"bankroll": val}, f)
+
+# --- 2. FUNKCE PRO ČÁRKY A TEČKY ---
+def smart_float_input(label, default_val, key):
+    # Uživatel může zadat text s čárkou
+    val_str = st.text_input(label, value=str(default_val), key=key)
+    try:
+        # Převedeme případnou čárku na tečku a uděláme z toho float
+        return float(val_str.replace(",", "."))
+    except ValueError:
+        # Pokud se zadá nesmysl (např. písmena), vrátí se defaultní hodnota
+        return float(default_val)
 
 # --- SIDEBAR: MONEY MANAGEMENT ---
 with st.sidebar:
     st.header("💰 Bankroll Management")
-    bankroll = st.number_input("Tvůj celkový bankroll (Kč)", min_value=0, value=10000, step=500)
+    
+    saved_bank = load_bankroll()
+    bankroll = st.number_input("Tvůj celkový bankroll (Kč)", min_value=0, value=int(saved_bank), step=500)
+    
+    # Uložíme nový bankroll, pokud ho uživatel změní
+    if bankroll != saved_bank:
+        save_bankroll(bankroll)
+        
     kelly_fraction = st.select_slider(
         "Agresivita (Kelly Fraction)",
         options=[0.125, 0.25, 0.5, 1.0],
         value=0.25,
-        help="1/8 Kelly (velmi konzervativní), 1/4 Kelly (standard), 1/2 Kelly (agresivní), Full Kelly (riskantní)"
+        help="1/8 Kelly (konzervativní), 1/4 Kelly (standard), 1/2 Kelly (agresivní), Full Kelly (riskantní)"
     )
     st.caption("Doporučeno: 0.25 (1/4 Kelly) pro dlouhodobou udržitelnost.")
 
-# 1. FUNKCE PRO VSTUP DAT (Bez držení míče, s vahou času)
+# --- 3. FUNKCE PRO VSTUP DAT ---
 def match_history_input(team_label):
     st.subheader(f"Historie: {team_label}")
     data = {"gf": [], "ga": [], "xg": [], "xga": []}
@@ -39,9 +75,10 @@ def match_history_input(team_label):
             
         c3, c4 = st.columns(2)
         with c3:
-            xg = st.number_input("xG", min_value=0.0, value=1.2, step=0.1, format="%.2f", key=f"{team_label}_xg_{i}")
+            # Využití nové funkce pro xG, aby brala čárky
+            xg = smart_float_input("xG", 1.2, key=f"{team_label}_xg_{i}")
         with c4:
-            xga = st.number_input("xG proti", min_value=0.0, value=1.0, step=0.1, format="%.2f", key=f"{team_label}_xga_{i}")
+            xga = smart_float_input("xG proti", 1.0, key=f"{team_label}_xga_{i}")
         
         data["gf"].append(gf)
         data["ga"].append(ga)
@@ -56,7 +93,7 @@ def match_history_input(team_label):
         
     return avg_stats
 
-# 2. AI KOMENTÁŘ
+# --- 4. AI KOMENTÁŘ ---
 def get_ai_commentary(p_home, p_draw, p_away, p_over, pred_score):
     comments = []
     if p_home > 0.65: comments.append("🏠 Domácí jsou dneska absolutní páni hřiště. Hosté si nejspíš přijeli jen pro výslužku.")
@@ -84,7 +121,7 @@ if st.button("MAGICKÝ VÝPOČET VALUE & KELLY", type="primary", use_container_w
     home_lambda = ((home_data["xg"] * 0.7 + home_data["gf"] * 0.3) + (away_data["xga"] * 0.7 + away_data["ga"] * 0.3)) / 2
     away_lambda = ((away_data["xg"] * 0.7 + away_data["gf"] * 0.3) + (home_data["xga"] * 0.7 + home_data["ga"] * 0.3)) / 2
 
-    # 3. MATICE + DIXON-COLES
+    # MATICE + DIXON-COLES
     max_g = 8
     prob_matrix = np.zeros((max_g, max_g))
     rho = -0.05 
@@ -113,20 +150,19 @@ if st.button("MAGICKÝ VÝPOČET VALUE & KELLY", type="primary", use_container_w
     st.markdown(f"<h2 style='text-align: center;'>🎯 Predikce: {most_likely[0]} : {most_likely[1]}</h2>", unsafe_allow_html=True)
     st.divider()
 
-    # 4. VÝSLEDKY S KELLYHO KRITÉRIEM
+    # VÝSLEDKY S KELLYHO KRITÉRIEM
     def display_market(label, prob):
         c_res, c_odds, c_kelly = st.columns([2, 1, 1.5])
         with c_res:
             st.write(f"**{label}**")
             st.caption(f"Model: {1/prob:.2f} ({prob*100:.1f}%)")
         with c_odds:
-            user_odds = st.number_input("Kurz Tipsport", min_value=1.0, value=1.0, step=0.05, key=f"odds_{label}")
+            # Využití nové funkce i pro kurzy, abys mohl psát např. 1,85
+            user_odds = smart_float_input("Kurz Tipsport", 1.0, key=f"odds_{label}")
         
         with c_kelly:
             if user_odds > 1.0:
                 ev = (prob * user_odds) - 1
-                # Kellyho vzorec: f* = (p*b - q) / b  => f* = (p*(odds-1) - (1-p)) / (odds-1)
-                # Zjednodušeně: f* = (p * odds - 1) / (odds - 1)
                 kelly_f = (prob * user_odds - 1) / (user_odds - 1)
                 fractional_kelly = kelly_f * kelly_fraction
                 
