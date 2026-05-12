@@ -8,25 +8,52 @@ st.set_page_config(page_title="Value Bot v3.0", layout="wide")
 st.title("⚽ Betting Bot v3.0")
 st.markdown("Zadej historii posledních 5 zápasů pro oba týmy. Model vypočítá pravděpodobnosti pro 10+ sázkových trhů.")
 
-# Pomocná funkce pro vytvoření tabulky historie
+# Pomocná funkce pro vytvoření formuláře historie (optimalizováno pro mobil)
 def match_history_input(team_label):
     st.subheader(f"Historie: {team_label}")
-    # Definice prázdné tabulky pro 5 zápasů
-    df = pd.DataFrame(
-        [
-            {"Zápas": i+1, "Góly Pro": 1, "Góly Proti": 1, "xG Pro": 1.2, "xG Proti": 1.0, "Držení %": 50}
-            for i in range(5)
-        ]
-    )
-    edited_df = st.data_editor(df, key=f"editor_{team_label}", hide_index=True)
     
-    # Výpočet průměrů
+    data = {"gf": [], "ga": [], "xg": [], "xga": [], "poss": []}
+    
+    for i in range(5):
+        st.markdown(f"**Zápas {i+1}**")
+        
+        # 1. Řádek: Výsledek (Góly)
+        c1, c2 = st.columns(2)
+        with c1:
+            gf = st.number_input("Góly", min_value=0, value=1, step=1, key=f"{team_label}_gf_{i}")
+        with c2:
+            ga = st.number_input("Góly proti", min_value=0, value=1, step=1, key=f"{team_label}_ga_{i}")
+            
+        # 2. Řádek: xG
+        c3, c4 = st.columns(2)
+        with c3:
+            xg = st.number_input("xG", min_value=0.0, value=1.2, step=0.1, format="%.2f", key=f"{team_label}_xg_{i}")
+        with c4:
+            xga = st.number_input("xG proti", min_value=0.0, value=1.0, step=0.1, format="%.2f", key=f"{team_label}_xga_{i}")
+            
+        # 3. Řádek: Držení míče
+        c5, c6 = st.columns(2)
+        with c5:
+            poss = st.number_input("Držení %", min_value=0, max_value=100, value=50, step=1, key=f"{team_label}_poss_{i}")
+            
+        # Uložení hodnot
+        data["gf"].append(gf)
+        data["ga"].append(ga)
+        data["xg"].append(xg)
+        data["xga"].append(xga)
+        data["poss"].append(poss)
+        
+        # Oddělovač mezi zápasy (kromě posledního)
+        if i < 4:
+            st.divider()
+            
+    # Výpočet průměrů z listů
     avg_stats = {
-        "gf": edited_df["Góly Pro"].mean(),
-        "ga": edited_df["Góly Proti"].mean(),
-        "xg": edited_df["xG Pro"].mean(),
-        "xga": edited_df["xG Proti"].mean(),
-        "poss": edited_df["Držení %"].mean()
+        "gf": sum(data["gf"]) / 5,
+        "ga": sum(data["ga"]) / 5,
+        "xg": sum(data["xg"]) / 5,
+        "xga": sum(data["xga"]) / 5,
+        "poss": sum(data["poss"]) / 5
     }
     return avg_stats
 
