@@ -1,10 +1,3 @@
-Jasně, není problém! Přidání predikovaného výsledku (neboli nejpravděpodobnějšího přesného skóre) je super nápad.
-
-Kód jsem upravil tak, že po výpočtu Poissonovy matice najde to skóre (kombinaci gólů domácích a hostů), které má absolutně nejvyšší pravděpodobnost, a ukáže ho hezky nahoře nad ostatními výsledky i s procenty.
-
-Tady je kompletní aktualizovaný kód:
-
-Python
 import streamlit as st
 import scipy.stats as stats
 import pandas as pd
