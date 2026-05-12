@@ -104,7 +104,3 @@ if st.button("VYPOČÍTAT VŠECHNY TRHY", type="primary", use_container_width=Tr
         st.write(f"**Over 2.5:** {1/p_over25:.2f} ({p_over25*100:.1f}%)")
         st.write(f"**Under 2.5:** {1/p_under25:.2f} ({p_under25*100:.1f}%)")
         st.write(f"**Over 1.5:** {1/p_over15:.2f} ({p_over15*100:.1f}%)")
-
-    st.success("Analýza hotova. Porovnej tyto 'Férové kurzy' s nabídkou sázkovky. Pokud je kurz sázkovky vyšší, našel jsi VALUE.")
-
-Vše je připraveno! Tento kód stačí zkopírovat do tvého souboru `app.py` na GitHubu a Streamlit automaticky aktualizuje tvou aplikaci. Teď už máš v rukou profesionální analytický nástroj. Dej vědět, jak se ti s ním pracuje!
