@@ -1,3 +1,10 @@
+Jasně, není problém! Přidání predikovaného výsledku (neboli nejpravděpodobnějšího přesného skóre) je super nápad.
+
+Kód jsem upravil tak, že po výpočtu Poissonovy matice najde to skóre (kombinaci gólů domácích a hostů), které má absolutně nejvyšší pravděpodobnost, a ukáže ho hezky nahoře nad ostatními výsledky i s procenty.
+
+Tady je kompletní aktualizovaný kód:
+
+Python
 import streamlit as st
 import scipy.stats as stats
 import pandas as pd
@@ -79,6 +86,11 @@ if st.button("VYPOČÍTAT VŠECHNY TRHY", type="primary", use_container_width=Tr
         for j in range(max_g):
             prob_matrix[i, j] = stats.poisson.pmf(i, home_lambda) * stats.poisson.pmf(j, away_lambda)
 
+    # Nalezení nejpravděpodobnějšího přesného výsledku
+    most_likely_idx = np.unravel_index(np.argmax(prob_matrix, axis=None), prob_matrix.shape)
+    pred_home_goals, pred_away_goals = most_likely_idx
+    highest_prob = prob_matrix[pred_home_goals, pred_away_goals]
+
     # 1. 1X2 Pravděpodobnosti
     p_home = np.sum(np.tril(prob_matrix, -1))
     p_draw = np.sum(np.diag(prob_matrix))
@@ -106,6 +118,12 @@ if st.button("VYPOČÍTAT VŠECHNY TRHY", type="primary", use_container_width=Tr
 
     # ZOBRAZENÍ VÝSLEDKŮ
     st.divider()
+    
+    # Zobrazení hlavní predikce
+    st.markdown(f"<h3 style='text-align: center;'>🔮 Nejpravděpodobnější výsledek: {pred_home_goals} : {pred_away_goals}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<p style='text-align: center;'>Pravděpodobnost tohoto skóre: {highest_prob*100:.1f}%</p>", unsafe_allow_html=True)
+    st.divider()
+
     res_col1, res_col2, res_col3 = st.columns(3)
 
     with res_col1:
