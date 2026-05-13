@@ -5,25 +5,32 @@ import numpy as np
 import json
 import os
 
-st.set_page_config(page_title="Value Bot v5.10 PRO", layout="wide")
+st.set_page_config(page_title="Value Bot v5.10", layout="wide")
 
-# CSS PRO VYNUCENÍ TLUSTÉHO POSUVNÍKU NA STRÁNCE
+# --- AGRESIVNÍ CSS PRO VYNUCENÍ POSUVNÍKU ---
 st.markdown("""
     <style>
-    /* Natvrdo zviditelní posuvník ve všech prohlížečích na jádru Webkit (Chrome, Edge, Safari) */
+    /* Natvrdo vynutí scrollování na hlavní stránce */
+    html, body, [data-testid="stAppViewContainer"], .main, .stApp {
+        overflow-y: scroll !important;
+    }
+    
+    /* Zviditelnění a nastylování posuvníku pro WebKit (Chrome, Safari, Edge) */
     ::-webkit-scrollbar {
-        width: 14px;
-        height: 14px;
+        width: 18px !important;
+        display: block !important;
+        background-color: #0e1117 !important; /* Tmavé pozadí */
     }
     ::-webkit-scrollbar-track {
-        background: #f1f1f1; 
+        background: #161b22 !important; 
     }
     ::-webkit-scrollbar-thumb {
-        background: #888; 
-        border-radius: 7px;
+        background-color: #666666 !important; /* Světlejší šedá, ať je hned vidět */
+        border-radius: 10px !important;
+        border: 3px solid #161b22 !important; /* Aby nebyl úplně nalepený na kraji */
     }
     ::-webkit-scrollbar-thumb:hover {
-        background: #555; 
+        background-color: #888888 !important; /* Při najetí myší ještě zesvětlá */
     }
     </style>
 """, unsafe_allow_html=True)
@@ -56,12 +63,11 @@ def smart_float_input(label, default_val, key):
 if "show_results" not in st.session_state:
     st.session_state.show_results = False
 
+# Tiket: seznam sázek
 if "ticket" not in st.session_state:
     st.session_state.ticket = []
 
-# =========================================================
-# 🎟️ TIKET A BANKROLL (SIDEBAR VLEVO)
-# =========================================================
+# --- SIDEBAR: MONEY MANAGEMENT & TIKET ---
 with st.sidebar:
     st.header("💰 Bankroll Management")
     
@@ -90,13 +96,10 @@ with st.sidebar:
     st.header("🎟️ Můj Tiket (SOLO)")
 
     if len(st.session_state.ticket) == 0:
-        st.caption("Zatím žádné sázky. Klikni na ➕ u libovolného trhu napravo.")
+        st.caption("Zatím žádné sázky. Klikni na ➕ u libovolného trhu.")
     else:
         total_stake = 0
         total_potential_return = 0
-        
-        n_sim = 1000
-        sim_results = np.zeros(n_sim)
 
         for idx, bet in enumerate(st.session_state.ticket):
             with st.container():
@@ -114,9 +117,6 @@ with st.sidebar:
 
             total_stake += bet["stake"]
             total_potential_return += bet["return_czk"]
-            
-            outcomes = np.random.choice([bet['stake'] * (bet['odds'] - 1), -bet['stake']], size=n_sim, p=[bet['prob'], 1-bet['prob']])
-            sim_results += outcomes
 
         st.divider()
 
@@ -133,30 +133,28 @@ with st.sidebar:
                 delta=f"+{int(total_profit)} Kč ({profit_pct:.1f}%)" if total_profit > 0 else f"{int(total_profit)} Kč"
             )
 
-        prob_in_plus = np.sum(sim_results > 0) / n_sim
-        st.metric("Šance na PLUS ze série sázek", f"{prob_in_plus*100:.1f}%")
-
+        # Riziko: pravděpodobnostní shrnutí (počet sázek, průměrné EV)
         avg_ev = np.mean([bet["ev"] for bet in st.session_state.ticket]) * 100
         if avg_ev > 5:
-            st.success(f"📈 Průměrné EV tiketu: +{avg_ev:.1f}%")
+            st.success(f"📈 Průměrné EV tiketu: +{avg_ev:.1f}% — vypadá to dobře!")
         elif avg_ev > 0:
-            st.warning(f"⚠️ Průměrné EV tiketu: +{avg_ev:.1f}%")
+            st.warning(f"⚠️ Průměrné EV tiketu: +{avg_ev:.1f}% — hraniční value.")
         else:
-            st.error(f"❌ Průměrné EV tiketu: {avg_ev:.1f}%")
+            st.error(f"❌ Průměrné EV tiketu: {avg_ev:.1f}% — tiket je ve ztrátě!")
 
         if st.button("🗑️ Vymazat celý tiket", use_container_width=True):
             st.session_state.ticket = []
             st.rerun()
 
-# =========================================================
-# ⚽ HLAVNÍ ČÁST APLIKACE (VPRAVO)
-# =========================================================
+# --- HLAVNÍ STRÁNKA VPRAVO ---
 st.title("⚽ Betting Bot v5.10 PRO + Smart Tipovačka")
-st.markdown("Opravený posuvník (scrollbar) + AI predikce.")
+st.markdown("Opravený pevný posuvník pro Mac a vylepšená predikce skóre.")
 
+# --- 3. FUNKCE PRO VSTUP DAT ---
 def match_history_input(team_label):
     st.subheader(f"Historie: {team_label}")
     data = {"gf": [], "ga": [], "xg": [], "xga": []}
+    
     weights = [0.35, 0.25, 0.20, 0.13, 0.07]
     
     for i in range(5):
@@ -175,14 +173,20 @@ def match_history_input(team_label):
         with c4:
             xga = smart_float_input("xG proti", 1.0, key=f"{team_label}_xga_{i}")
         
-        data["gf"].append(gf); data["ga"].append(ga); data["xg"].append(xg); data["xga"].append(xga)
+        data["gf"].append(gf)
+        data["ga"].append(ga)
+        data["xg"].append(xg)
+        data["xga"].append(xga)
+        
         if i < 4: st.divider()
             
     avg_stats = {}
     for key in data:
         avg_stats[key] = sum(val * w for val, w in zip(data[key], weights))
+        
     return avg_stats
 
+# --- 4. AI KOMENTÁŘ ---
 def get_ai_commentary(p_home, p_draw, p_away, p_over):
     comments = []
     if p_home > 0.55: comments.append("🏠 Domácí jsou tady jasný favorit. Papírově by to měli urvat.")
@@ -196,12 +200,14 @@ def get_ai_commentary(p_home, p_draw, p_away, p_over):
     elif p_over < 0.40: comments.append("💤 Žádnou divočinu nečekej, spíš underový zápas.")
     return " ".join(comments)
 
-# --- VSTUPNÍ FORMULÁŘ ---
-c_h, c_a = st.columns(2)
-with c_h:
-    with st.expander("🏠 HISTORIE DOMÁCÍCH", expanded=True): home_data = match_history_input("Domácí")
-with c_a:
-    with st.expander("🚀 HISTORIE HOSTŮ", expanded=True): away_data = match_history_input("Hosté")
+# --- HLAVNÍ FORMULÁŘ ---
+col1, col2 = st.columns(2)
+with col1:
+    with st.expander("🏠 HISTORIE DOMÁCÍCH", expanded=True):
+        home_data = match_history_input("Domácí")
+with col2:
+    with st.expander("🚀 HISTORIE HOSTŮ", expanded=True):
+        away_data = match_history_input("Hosté")
 
 if st.button("MAGICKÝ VÝPOČET VALUE & KELLY", type="primary", use_container_width=True):
     st.session_state.show_results = True
@@ -229,13 +235,17 @@ if st.session_state.show_results:
     p_draw = np.sum(np.diag(prob_matrix))
     p_away = np.sum(np.triu(prob_matrix, 1))
     
-    p_1x = p_home + p_draw; p_x2 = p_draw + p_away; p_12 = p_home + p_away
+    p_1x = p_home + p_draw
+    p_x2 = p_draw + p_away
+    p_12 = p_home + p_away
     p_dnb1 = p_home / (p_home + p_away) if (p_home + p_away) > 0 else 0.001
     p_dnb2 = p_away / (p_home + p_away) if (p_home + p_away) > 0 else 0.001
     
-    p_btts_yes = np.sum(prob_matrix[1:, 1:]); p_btts_no = 1 - p_btts_yes
+    p_btts_yes = np.sum(prob_matrix[1:, 1:])
+    p_btts_no = 1 - p_btts_yes
     
-    def get_over(threshold): return np.sum([prob_matrix[i, j] for i in range(max_g) for j in range(max_g) if i+j > threshold])
+    def get_over(threshold):
+        return np.sum([prob_matrix[i, j] for i in range(max_g) for j in range(max_g) if i+j > threshold])
     
     p_o05 = get_over(0.5); p_u05 = 1 - p_o05
     p_o15 = get_over(1.5); p_u15 = 1 - p_o15
@@ -251,118 +261,159 @@ if st.session_state.show_results:
     p_a_o15 = np.sum(prob_matrix[:, 2:]); p_a_u15 = 1 - p_a_o15
     p_a_o25 = np.sum(prob_matrix[:, 3:]); p_a_u25 = 1 - p_a_o25
 
-    best_score = (0, 0); best_prob = 0
+    # ==========================================
+    # SMART TIPOVAČKA LOGIKA
+    # ==========================================
+    best_score = (0, 0)
+    best_prob = 0
     
     if p_home > p_draw and p_home > p_away: 
         for i in range(1, max_g):
             for j in range(i):
                 if prob_matrix[i, j] > best_prob:
-                    best_prob = prob_matrix[i, j]; best_score = (i, j)
+                    best_prob = prob_matrix[i, j]
+                    best_score = (i, j)
     elif p_away > p_home and p_away > p_draw: 
         for i in range(max_g):
             for j in range(i + 1, max_g):
                 if prob_matrix[i, j] > best_prob:
-                    best_prob = prob_matrix[i, j]; best_score = (i, j)
+                    best_prob = prob_matrix[i, j]
+                    best_score = (i, j)
     else: 
         for i in range(max_g):
             if prob_matrix[i, i] > best_prob:
-                best_prob = prob_matrix[i, i]; best_score = (i, i)
+                best_prob = prob_matrix[i, i]
+                best_score = (i, i)
     
-    # -------------------------------------------------------------
-    # ZDE ZAČÍNÁ SCROLL-BOX (Pevná výška, jasně viditelný posuvník)
-    # -------------------------------------------------------------
-    with st.container(height=800, border=False):
-        st.divider()
-        st.info(get_ai_commentary(p_home, p_draw, p_away, p_o25))
-        st.markdown(f"<h2 style='text-align: center;'>🎯 Smart Tipovačka: {best_score[0]} : {best_score[1]}</h2>", unsafe_allow_html=True)
-        st.divider()
+    st.divider()
+    st.info(get_ai_commentary(p_home, p_draw, p_away, p_o25))
+    st.markdown(f"<h2 style='text-align: center;'>🎯 Smart Tipovačka: {best_score[0]} : {best_score[1]}</h2>", unsafe_allow_html=True)
+    st.caption("*(Model nyní garantuje, že přesný výsledek kopíruje nejpravděpodobnějšího vítěze celého zápasu (1X2), abys nepřicházel o body v soutěžích jako Tipsport Tipovačka.)*")
+    st.divider()
 
-        def add_to_ticket(label, prob, user_odds, stake_czk, ev):
-            stake_int = max(0, int(stake_czk))
-            return_czk = int(stake_int * user_odds)
-            profit_czk = return_czk - stake_int
-            if label in [b["label"] for b in st.session_state.ticket]: return False, "already_exists"
-            st.session_state.ticket.append({"label": label, "odds": user_odds, "stake": stake_int, "return_czk": return_czk, "profit_czk": profit_czk, "ev": ev, "prob": prob})
-            return True, "added"
+    def add_to_ticket(label, prob, user_odds, stake_czk, ev):
+        stake_int = max(0, int(stake_czk))
+        return_czk = int(stake_int * user_odds)
+        profit_czk = return_czk - stake_int
 
-        def display_market(label, prob):
-            prob = max(min(prob, 0.999), 0.001)
-            c_res, c_odds, c_kelly, c_add = st.columns([2, 1, 2, 0.5])
-            with c_res:
-                st.write(f"**{label}**")
-                st.caption(f"Model: {1/prob:.2f} ({prob*100:.1f}%)")
-            with c_odds:
-                user_odds = smart_float_input("Kurz", 1.0, key=f"odds_{label}")
-            with c_kelly:
-                if user_odds > 1.0:
-                    ev = (prob * user_odds) - 1
-                    kelly_f = (prob * user_odds - 1) / (user_odds - 1)
-                    fractional_kelly = kelly_f * kelly_fraction
-                    stake_czk = max(0, int(bankroll * fractional_kelly))
-                    return_czk = int(stake_czk * user_odds)
-                    profit_czk = return_czk - stake_czk
+        existing_labels = [b["label"] for b in st.session_state.ticket]
+        if label in existing_labels:
+            return False, "already_exists"
 
-                    if ev > 0.05:
-                        st.success(f"🔥 VALUE +{ev*100:.1f}%")
-                        st.write(f"💰 Vsadit: **{stake_czk} Kč** → **{return_czk} Kč** (+{profit_czk} Kč)")
-                    elif ev > 0:
-                        st.warning(f"✅ OK +{ev*100:.1f}%")
-                        st.write(f"💰 Vsadit: **{stake_czk} Kč** → **{return_czk} Kč** (+{profit_czk} Kč)")
-                    else:
-                        st.error(f"❌ Trash {ev*100:.1f}%")
+        st.session_state.ticket.append({
+            "label": label,
+            "odds": user_odds,
+            "stake": stake_int,
+            "return_czk": return_czk,
+            "profit_czk": profit_czk,
+            "ev": ev,
+        })
+        return True, "added"
+
+    def display_market(label, prob):
+        prob = max(min(prob, 0.999), 0.001)
+        c_res, c_odds, c_kelly, c_add = st.columns([2, 1, 2, 0.5])
+        with c_res:
+            st.write(f"**{label}**")
+            st.caption(f"Model: {1/prob:.2f} ({prob*100:.1f}%)")
+        with c_odds:
+            user_odds = smart_float_input("Kurz", 1.0, key=f"odds_{label}")
+        with c_kelly:
+            if user_odds > 1.0:
+                ev = (prob * user_odds) - 1
+                kelly_f = (prob * user_odds - 1) / (user_odds - 1)
+                fractional_kelly = kelly_f * kelly_fraction
+                stake_czk = max(0, int(bankroll * fractional_kelly))
+                return_czk = int(stake_czk * user_odds)
+                profit_czk = return_czk - stake_czk
+
+                if ev > 0.05:
+                    st.success(f"🔥 VALUE +{ev*100:.1f}%")
+                    st.write(f"💰 Vsadit: **{stake_czk} Kč** → návrat **{return_czk} Kč** (+{profit_czk} Kč)")
+                elif ev > 0:
+                    st.warning(f"✅ OK +{ev*100:.1f}%")
+                    st.write(f"💰 Vsadit: **{stake_czk} Kč** → návrat **{return_czk} Kč** (+{profit_czk} Kč)")
                 else:
-                    st.write("")
-            with c_add:
-                st.write("")
-                st.write("")
-                if user_odds > 1.0:
-                    already = label in [b["label"] for b in st.session_state.ticket]
-                    btn_label = "✅" if already else "➕"
-                    if st.button(btn_label, key=f"add_{label}", disabled=already):
-                        ev_val = (prob * user_odds) - 1
-                        kelly_f2 = (prob * user_odds - 1) / (user_odds - 1)
-                        stake2 = max(0, int(bankroll * kelly_f2 * kelly_fraction))
-                        if add_to_ticket(label, prob, user_odds, stake2, ev_val)[0]: st.rerun()
-                    
-        tab1, tab2, tab3 = st.tabs(["🏆 Zápas & Ostatní", "⚽ Góly v Zápase", "🥅 Góly Týmů"])
+                    st.error(f"❌ Trash {ev*100:.1f}%")
+                    stake_czk = 0
+                    ev_for_ticket = ev
+            else:
+                ev = -1.0
+                stake_czk = 0
+        with c_add:
+            st.write("") 
+            st.write("")
+            if user_odds > 1.0:
+                already = label in [b["label"] for b in st.session_state.ticket]
+                btn_label = "✅" if already else "➕"
+                btn_help = "Už na tiketu" if already else "Přidat na tiket"
+                if st.button(btn_label, key=f"add_{label}", help=btn_help, disabled=already):
+                    ev_val = (prob * user_odds) - 1
+                    kelly_f2 = (prob * user_odds - 1) / (user_odds - 1)
+                    stake2 = max(0, int(bankroll * kelly_f2 * kelly_fraction))
+                    ok, reason = add_to_ticket(label, prob, user_odds, stake2, ev_val)
+                    if ok:
+                        st.rerun()
+                
+    tab1, tab2, tab3 = st.tabs(["🏆 Zápas & Ostatní", "⚽ Góly v Zápase", "🥅 Góly Týmů"])
 
-        with tab1:
-            t1_c1, t1_c2 = st.columns(2)
-            with t1_c1:
-                st.subheader("1X2 & Dvojitá šance")
-                display_market("Výhra Domácí (1)", p_home)
-                display_market("Remíza (X)", p_draw)
-                display_market("Výhra Hosté (2)", p_away)
-                st.divider()
-                display_market("Neprohra Domácí (1X)", p_1x)
-                display_market("Neprohra Hosté (X2)", p_x2)
-                display_market("Kdokoli vyhraje (12)", p_12)
-            with t1_c2:
-                st.subheader("Sázky bez remízy (DNB) & BTTS")
-                display_market("DNB 1 (Domácí)", p_dnb1)
-                display_market("DNB 2 (Hosté)", p_dnb2)
-                st.divider()
-                display_market("BTTS (Ano)", p_btts_yes)
-                display_market("BTTS (Ne)", p_btts_no)
+    with tab1:
+        t1_col1, t1_col2 = st.columns(2)
+        with t1_col1:
+            st.subheader("1X2 & Dvojitá šance")
+            display_market("Výhra Domácí (1)", p_home)
+            display_market("Remíza (X)", p_draw)
+            display_market("Výhra Hosté (2)", p_away)
+            st.divider()
+            display_market("Neprohra Domácí (1X)", p_1x)
+            display_market("Neprohra Hosté (X2)", p_x2)
+            display_market("Kdokoli vyhraje (12)", p_12)
+            
+        with t1_col2:
+            st.subheader("Sázky bez remízy (DNB) & BTTS")
+            display_market("DNB 1 (Domácí)", p_dnb1)
+            display_market("DNB 2 (Hosté)", p_dnb2)
+            st.divider()
+            display_market("BTTS (Ano)", p_btts_yes)
+            display_market("BTTS (Ne)", p_btts_no)
 
-        with tab2:
-            t2_c1, t2_c2 = st.columns(2)
-            with t2_c1:
-                st.subheader("Over (Více než)")
-                display_market("Over 0.5", p_o05); display_market("Over 1.5", p_o15); display_market("Over 2.5", p_o25); display_market("Over 3.5", p_o35); display_market("Over 4.5", p_o45)
-            with t2_c2:
-                st.subheader("Under (Méně než)")
-                display_market("Under 0.5", p_u05); display_market("Under 1.5", p_u15); display_market("Under 2.5", p_u25); display_market("Under 3.5", p_u35); display_market("Under 4.5", p_u45)
+    with tab2:
+        t2_col1, t2_col2 = st.columns(2)
+        with t2_col1:
+            st.subheader("Over (Více než)")
+            display_market("Over 0.5", p_o05)
+            display_market("Over 1.5", p_o15)
+            display_market("Over 2.5", p_o25)
+            display_market("Over 3.5", p_o35)
+            display_market("Over 4.5", p_o45)
+        with t2_col2:
+            st.subheader("Under (Méně než)")
+            display_market("Under 0.5", p_u05)
+            display_market("Under 1.5", p_u15)
+            display_market("Under 2.5", p_u25)
+            display_market("Under 3.5", p_u35)
+            display_market("Under 4.5", p_u45)
 
-        with tab3:
-            t3_c1, t3_c2 = st.columns(2)
-            with t3_c1:
-                st.subheader("Domácí Góly")
-                display_market("Domácí Over 0.5", p_h_o05); display_market("Domácí Under 0.5", p_h_u05); st.divider()
-                display_market("Domácí Over 1.5", p_h_o15); display_market("Domácí Under 1.5", p_h_u15); st.divider()
-                display_market("Domácí Over 2.5", p_h_o25); display_market("Domácí Under 2.5", p_h_u25)
-            with t3_c2:
-                st.subheader("Hosté Góly")
-                display_market("Hosté Over 0.5", p_a_o05); display_market("Hosté Under 0.5", p_a_u05); st.divider()
-                display_market("Hosté Over 1.5", p_a_o15); display_market("Hosté Under 1.5", p_a_u15); st.divider()
-                display_market("Hosté Over 2.5", p_a_o25); display_market("Hosté Under 2.5", p_a_u25)
+    with tab3:
+        t3_col1, t3_col2 = st.columns(2)
+        with t3_col1:
+            st.subheader("Domácí Góly")
+            display_market("Domácí Over 0.5", p_h_o05)
+            display_market("Domácí Under 0.5", p_h_u05)
+            st.divider()
+            display_market("Domácí Over 1.5", p_h_o15)
+            display_market("Domácí Under 1.5", p_h_u15)
+            st.divider()
+            display_market("Domácí Over 2.5", p_h_o25)
+            display_market("Domácí Under 2.5", p_h_u25)
+
+        with t3_col2:
+            st.subheader("Hosté Góly")
+            display_market("Hosté Over 0.5", p_a_o05)
+            display_market("Hosté Under 0.5", p_a_u05)
+            st.divider()
+            display_market("Hosté Over 1.5", p_a_o15)
+            display_market("Hosté Under 1.5", p_a_u15)
+            st.divider()
+            display_market("Hosté Over 2.5", p_a_o25)
+            display_market("Hosté Under 2.5", p_a_u25)
