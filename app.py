@@ -5,7 +5,7 @@ import numpy as np
 import json
 import os
 
-st.set_page_config(page_title="Value Bot v5.10", layout="wide")
+st.set_page_config(page_title="Value Bot v6.0 WC", layout="wide")
 
 # --- AGRESIVNÍ CSS PRO VYNUCENÍ POSUVNÍKU ---
 st.markdown("""
@@ -147,12 +147,24 @@ with st.sidebar:
             st.rerun()
 
 # --- HLAVNÍ STRÁNKA VPRAVO ---
-st.title("⚽ Betting Bot v5.10 PRO + Smart Tipovačka")
-st.markdown("Opravený pevný posuvník pro Mac a vylepšená predikce skóre.")
+st.title("⚽ Value Bot v6.0 PRO 🏆 World Cup Edition")
+st.markdown("Opravený pevný posuvník pro Mac, vylepšená predikce skóre a turnajový mód.")
+
+# --- WORLD CUP NASTAVENÍ ---
+st.markdown("### 🌍 Nastavení turnaje")
+c_wc1, c_wc2 = st.columns(2)
+with c_wc1:
+    wc_mode = st.toggle("Aktivovat World Cup Mód (Neutrální půda, FIFA Žebříček)", value=False)
+with c_wc2:
+    if wc_mode:
+        playoff_mode = st.toggle("🏆 Vyřazovací část (Zvyšuje šanci na remízu a Under)", value=False)
+    else:
+        playoff_mode = False
+
+st.divider()
 
 # --- 3. FUNKCE PRO VSTUP DAT ---
 def match_history_input(team_label):
-    st.subheader(f"Historie: {team_label}")
     data = {"gf": [], "ga": [], "xg": [], "xga": []}
     
     weights = [0.35, 0.25, 0.20, 0.13, 0.07]
@@ -186,28 +198,49 @@ def match_history_input(team_label):
         
     return avg_stats
 
-# --- 4. AI KOMENTÁŘ ---
-def get_ai_commentary(p_home, p_draw, p_away, p_over):
+# --- 4. AI KOMENTÁŘ (Nové upravené limity pro favority) ---
+def get_ai_commentary(p_home, p_draw, p_away, p_over, wc_mode, playoff_mode):
+    t1 = "Tým A" if wc_mode else "Domácí"
+    t2 = "Tým B" if wc_mode else "Hosté"
+
     comments = []
-    if p_home > 0.55: comments.append("🏠 Domácí jsou tady jasný favorit. Papírově by to měli urvat.")
-    elif p_home > 0.45: comments.append("🏟️ Domácí mají mírnou výhodu, ale žádná tutovka to není.")
-    elif p_away > 0.55: comments.append("🚀 Hosté sem přijeli vyhrát a kvalitu na to mají.")
-    elif p_away > 0.45: comments.append("🚌 Hosté jsou lehkým favoritem, ale domácí budou kousat.")
-    elif p_draw > 0.33: comments.append("🤝 Tohle smrdí těžkou taktickou bitvou, remíza visí ve vzduchu.")
+    # Změněné limity podle naší dohody (Jasný favorit nad 70%, Favorit nad 55%, Lehký nad 45%)
+    if p_home > 0.70: comments.append(f"🔥 {t1} je tady naprosto jasný favorit. Papírově by to měli přejet rozdílem třídy.")
+    elif p_home > 0.55: comments.append(f"🏠 {t1} má kvalitu na své straně a měli by to urvat.")
+    elif p_home > 0.45: comments.append(f"🏟️ {t1} má mírnou výhodu, ale žádná tutovka to není.")
+    elif p_away > 0.70: comments.append(f"🔥 {t2} je absolutní favorit, cokoliv jiného než výhra bude obrovský šok.")
+    elif p_away > 0.55: comments.append(f"🚀 {t2} má vyšší kvalitu a měl by zápas ovládnout.")
+    elif p_away > 0.45: comments.append(f"🚌 {t2} je lehkým favoritem, ale bude to boj.")
+    elif p_draw > 0.33: 
+        if playoff_mode: comments.append("🤝 Tady to smrdí prodloužením. Taktická bitva a nikdo neudělá první chybu.")
+        else: comments.append("🤝 Tohle smrdí těžkou taktickou bitvou, remíza visí ve vzduchu.")
     else: comments.append("⚖️ Brutálně vyrovnaný zápas. Tady může vyhrát úplně kdokoliv.")
 
     if p_over > 0.60: comments.append("🥅 Model cítí ofenzivní hody, měly by padat góly.")
-    elif p_over < 0.40: comments.append("💤 Žádnou divočinu nečekej, spíš underový zápas.")
+    elif p_over < 0.40: 
+        if playoff_mode: comments.append("💤 Klasický turnajový beton v play-off. Očekávám hodně málo gólů.")
+        else: comments.append("💤 Žádnou divočinu nečekej, spíš underový zápas.")
     return " ".join(comments)
 
 # --- HLAVNÍ FORMULÁŘ ---
-col1, col2 = st.columns(2)
-with col1:
-    with st.expander("🏠 HISTORIE DOMÁCÍCH", expanded=True):
-        home_data = match_history_input("Domácí")
-with col2:
-    with st.expander("🚀 HISTORIE HOSTŮ", expanded=True):
-        away_data = match_history_input("Hosté")
+c_h, c_a = st.columns(2)
+rank_h = 15; rank_a = 45 # Defaultní hodnoty
+
+label_h = "Tým A" if wc_mode else "Domácí"
+label_a = "Tým B" if wc_mode else "Hosté"
+
+with c_h:
+    with st.expander(f"🏠 HISTORIE: {label_h.upper()}", expanded=True):
+        if wc_mode: 
+            rank_h = st.number_input(f"FIFA Žebříček ({label_h})", min_value=1, value=15, step=1)
+            st.divider()
+        home_data = match_history_input(label_h)
+with c_a:
+    with st.expander(f"🚀 HISTORIE: {label_a.upper()}", expanded=True):
+        if wc_mode: 
+            rank_a = st.number_input(f"FIFA Žebříček ({label_a})", min_value=1, value=45, step=1)
+            st.divider()
+        away_data = match_history_input(label_a)
 
 if st.button("MAGICKÝ VÝPOČET VALUE & KELLY", type="primary", use_container_width=True):
     st.session_state.show_results = True
@@ -216,9 +249,22 @@ if st.session_state.show_results:
     home_lambda = ((home_data["xg"] * 0.75 + home_data["gf"] * 0.25) + (away_data["xga"] * 0.75 + away_data["ga"] * 0.25)) / 2
     away_lambda = ((away_data["xg"] * 0.75 + away_data["gf"] * 0.25) + (home_data["xga"] * 0.75 + home_data["ga"] * 0.25)) / 2
 
+    # Aplikace Elo úpravy, pokud je zapnutý turnajový mód
+    if wc_mode:
+        rank_diff = rank_a - rank_h # Kladné číslo = Tým A je papírově silnější
+        adj_factor_a = max(0.7, min(1.3, 1.0 + (rank_diff * 0.005)))
+        adj_factor_b = max(0.7, min(1.3, 1.0 - (rank_diff * 0.005)))
+        
+        home_lambda *= adj_factor_a
+        away_lambda *= adj_factor_b
+        
+        # Brutálnější Dixon-Coles pro Playoff mód (více remíz a underů)
+        rho = -0.12 if playoff_mode else -0.05
+    else:
+        rho = -0.05 
+    
     max_g = 8
     prob_matrix = np.zeros((max_g, max_g))
-    rho = -0.05 
     
     for i in range(max_g):
         for j in range(max_g):
@@ -286,7 +332,7 @@ if st.session_state.show_results:
                 best_score = (i, i)
     
     st.divider()
-    st.info(get_ai_commentary(p_home, p_draw, p_away, p_o25))
+    st.info(get_ai_commentary(p_home, p_draw, p_away, p_o25, wc_mode, playoff_mode))
     st.markdown(f"<h2 style='text-align: center;'>🎯 Smart Tipovačka: {best_score[0]} : {best_score[1]}</h2>", unsafe_allow_html=True)
     st.caption("*(Model nyní garantuje, že přesný výsledek kopíruje nejpravděpodobnějšího vítěze celého zápasu (1X2), abys nepřicházel o body v soutěžích jako Tipsport Tipovačka.)*")
     st.divider()
@@ -307,6 +353,7 @@ if st.session_state.show_results:
             "return_czk": return_czk,
             "profit_czk": profit_czk,
             "ev": ev,
+            "prob": prob # Přidáno prob pro simulaci v sidebaru
         })
         return True, "added"
 
@@ -336,7 +383,6 @@ if st.session_state.show_results:
                 else:
                     st.error(f"❌ Trash {ev*100:.1f}%")
                     stake_czk = 0
-                    ev_for_ticket = ev
             else:
                 ev = -1.0
                 stake_czk = 0
@@ -357,22 +403,27 @@ if st.session_state.show_results:
                 
     tab1, tab2, tab3 = st.tabs(["🏆 Zápas & Ostatní", "⚽ Góly v Zápase", "🥅 Góly Týmů"])
 
+    # Názvy trhů podle režimu WC
+    t1_l1 = f"Výhra {label_h} (1)"; t1_l2 = "Remíza (X)"; t1_l3 = f"Výhra {label_a} (2)"
+    t1_1x = f"Neprohra {label_h} (1X)"; t1_x2 = f"Neprohra {label_a} (X2)"
+    t1_d1 = f"DNB 1 ({label_h})"; t1_d2 = f"DNB 2 ({label_a})"
+
     with tab1:
         t1_col1, t1_col2 = st.columns(2)
         with t1_col1:
             st.subheader("1X2 & Dvojitá šance")
-            display_market("Výhra Domácí (1)", p_home)
-            display_market("Remíza (X)", p_draw)
-            display_market("Výhra Hosté (2)", p_away)
+            display_market(t1_l1, p_home)
+            display_market(t1_l2, p_draw)
+            display_market(t1_l3, p_away)
             st.divider()
-            display_market("Neprohra Domácí (1X)", p_1x)
-            display_market("Neprohra Hosté (X2)", p_x2)
+            display_market(t1_1x, p_1x)
+            display_market(t1_x2, p_x2)
             display_market("Kdokoli vyhraje (12)", p_12)
             
         with t1_col2:
             st.subheader("Sázky bez remízy (DNB) & BTTS")
-            display_market("DNB 1 (Domácí)", p_dnb1)
-            display_market("DNB 2 (Hosté)", p_dnb2)
+            display_market(t1_d1, p_dnb1)
+            display_market(t1_d2, p_dnb2)
             st.divider()
             display_market("BTTS (Ano)", p_btts_yes)
             display_market("BTTS (Ne)", p_btts_no)
@@ -397,23 +448,23 @@ if st.session_state.show_results:
     with tab3:
         t3_col1, t3_col2 = st.columns(2)
         with t3_col1:
-            st.subheader("Domácí Góly")
-            display_market("Domácí Over 0.5", p_h_o05)
-            display_market("Domácí Under 0.5", p_h_u05)
+            st.subheader(f"{label_h} Góly")
+            display_market(f"{label_h} Over 0.5", p_h_o05)
+            display_market(f"{label_h} Under 0.5", p_h_u05)
             st.divider()
-            display_market("Domácí Over 1.5", p_h_o15)
-            display_market("Domácí Under 1.5", p_h_u15)
+            display_market(f"{label_h} Over 1.5", p_h_o15)
+            display_market(f"{label_h} Under 1.5", p_h_u15)
             st.divider()
-            display_market("Domácí Over 2.5", p_h_o25)
-            display_market("Domácí Under 2.5", p_h_u25)
+            display_market(f"{label_h} Over 2.5", p_h_o25)
+            display_market(f"{label_h} Under 2.5", p_h_u25)
 
         with t3_col2:
-            st.subheader("Hosté Góly")
-            display_market("Hosté Over 0.5", p_a_o05)
-            display_market("Hosté Under 0.5", p_a_u05)
+            st.subheader(f"{label_a} Góly")
+            display_market(f"{label_a} Over 0.5", p_a_o05)
+            display_market(f"{label_a} Under 0.5", p_a_u05)
             st.divider()
-            display_market("Hosté Over 1.5", p_a_o15)
-            display_market("Hosté Under 1.5", p_a_u15)
+            display_market(f"{label_a} Over 1.5", p_a_o15)
+            display_market(f"{label_a} Under 1.5", p_a_u15)
             st.divider()
-            display_market("Hosté Over 2.5", p_a_o25)
-            display_market("Hosté Under 2.5", p_a_u25)
+            display_market(f"{label_a} Over 2.5", p_a_o25)
+            display_market(f"{label_a} Under 2.5", p_a_u25)
