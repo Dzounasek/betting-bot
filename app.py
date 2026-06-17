@@ -5,10 +5,10 @@ import numpy as np
 import json
 import os
 
-st.set_page_config(page_title="Value Bot v7.0 PRO", layout="wide")
+st.set_page_config(page_title="Value Bot v7.1 PRO", layout="wide")
 
 # =========================================================
-# THE PITCH EDITION: ČISTÉ ČERNÉ POZADÍ + NEON FOOTBALL UI
+# THE PITCH EDITION: ČISTÉ ČERNÉ POZADÍ + FIXNUTÝ SWITCHER
 # =========================================================
 st.markdown("""
     <style>
@@ -30,38 +30,30 @@ st.markdown("""
         border: 3px solid #000000 !important;
     }
     
-    /* --- DESIGN v7.0 THE PITCH --- */
-    
-    /* Čistě černé pozadí s jemnou fotbalovou grafikou v pozadí */
+    /* --- DESIGN v7.1 THE PITCH --- */
     .stApp {
         background-color: #000000 !important; 
         background-image: 
-            /* Silueta kopačky v pravém horním rohu */
-            url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMyMmM1NWUiIHN0cm9rZS13aWR0aD0iMC4yIiBzdHJva2Utb3BhY2l0eT0iMC4xNSI+PHBhdGggZD0iTTIgMTFzMS0zIDUtM2MzIDAgNyAxIDkgNHMyIDEgMyAydjJzLTEgMS0zIDEtNS0xLTgtMWMtMyAwLTUgMC02LTFMMiAxMXoiLz48L3N2Zz4='),
-            /* Vzor fotbalové sítě (hexagony) na pozadí */
-            url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MiIgaGVpZ2h0PSI5MCIgdmlld0JveD0iMCAwIDUyIDkwIj48ZyBmaWxsPSJub25lIiBzdHJva2U9IiMyMmM1NWUiIHN0cm9rZS13aWR0aD0iMC41IiBzdHJva2Utb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTI2IDBMMTAgMTV2MzBMMjYgNjBsMTYtMTVWMTVMMjYgMHptMCA5MEwxMCA3NVY0NUwyNiA2MGwxNiAxNVY3NUwyNiA5MHoiLz48L2c+PC9zdmc+');
-        background-position: top right, center;
-        background-repeat: no-repeat, repeat;
+            url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSI4MCIgdmlld0JveD0iMCAwIDQwIDQwIj48ZyBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMyMmM1NWUiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTAgMGg0MHY0MEgwVjB6bTIwIDIwaDIwdjIwSDIwVjIwek0wIDIwaDIwdjIwSDBWMjB6bTIwIDBIMHYyMGgyMFYyMHoiLz48L2c+PC9nPjwvc3ZnPg==');
         color: #e6edf3;
     }
 
-    /* Karty (Expandery s historií a trhy) nastylované jako vápno na hřišti */
+    /* Karty s historií jako lajny na hřišti */
     [data-testid="stExpander"] {
         background-color: rgba(10, 10, 10, 0.9) !important;
         border-radius: 16px !important;
-        border: 2px solid rgba(34, 197, 94, 0.4) !important; /* Neonově zelené lajny */
+        border: 2px solid rgba(34, 197, 94, 0.4) !important;
         box-shadow: 0 0 15px rgba(34, 197, 94, 0.1);
         margin-bottom: 25px;
     }
     
-    /* Hlavní tlačítko pro výpočet (Trávníkový neon gradient) */
+    /* Hlavní tlačítko */
     button[kind="primary"] {
         background: linear-gradient(135deg, #22c55e 0%, #15803d 100%) !important;
         color: white !important;
         font-weight: 800 !important;
         border: none !important;
         border-radius: 12px !important;
-        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease;
         box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
     }
     button[kind="primary"]:hover {
@@ -69,82 +61,96 @@ st.markdown("""
         box-shadow: 0 0 30px rgba(34, 197, 94, 0.7);
     }
 
-    /* Levý panel s tiketem */
     [data-testid="stSidebar"] {
         background-color: #050505 !important;
         border-right: 2px solid rgba(34, 197, 94, 0.3) !important;
     }
 
-    /* Barevná indikace Value */
     .ev-success { color: #22c55e !important; font-weight: bold !important; text-shadow: 0 0 5px rgba(34, 197, 94, 0.5); }
     .ev-trash { color: #ef4444 !important; font-weight: bold !important; }
-    
     .stNumberInput { margin-bottom: -15px; }
-    h1, h2, h3 { color: #ffffff !important; }
 
-    /* --- THE MASTER MODE SWITCHER --- */
-    div[data-testid="stRadio"] > div {
-        display: flex;
-        justify-content: center;
-        background-color: #0a0a0a;
-        border-radius: 50px;
-        border: 2px solid #22c55e;
-        padding: 6px;
-        box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
-        width: 60%;
-        margin: 0 auto 30px auto;
-    }
-    div[data-testid="stRadio"] > div > label {
-        flex: 1;
-        text-align: center;
-        border-radius: 40px;
-        padding: 12px 25px;
-        transition: all 0.3s ease;
+    /* --- 🌟 KOMPLETNÍ FIX MODERÍHO SWITCHERU 🌟 --- */
+    /* Schováme hnusné kulaté rádio tečky */
+    div[data-testid="stRadio"]     div[data-testid="stMarkdownContainer"] p {
+        font-size: 16px !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
     
-    /* STANDARD LIGA (Neonově zelená s bílou) */
-    div[data-testid="stRadio"] > div > label:first-child[data-checked="true"] {
+    div[data-testid="stRadio"] > div[role="radiogroup"] {
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: center !important;
+        gap: 15px !important;
+        background-color: #0a0a0a !important;
+        border: 2px solid rgba(34, 197, 94, 0.5) !important;
+        padding: 8px !important;
+        border-radius: 50px !important;
+        width: 55% !important;
+        margin: 0 auto 20px auto !important;
+        box-shadow: 0 0 20px rgba(34, 197, 94, 0.15);
+    }
+
+    /* Styl pro samotné labely tlačítek */
+    div[data-testid="stRadio"] > div[role="radiogroup"] > label {
+        flex: 1 !important;
+        background-color: transparent !important;
+        border-radius: 40px !important;
+        padding: 10px 20px !important;
+        text-align: center !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        cursor: pointer !important;
+        transition: all 0.25s ease !important;
+        border: 1px solid transparent !important;
+    }
+
+    /* Schování nativního Streamlit puntíku */
+    div[data-testid="stRadio"] > div[role="radiogroup"] > label > div:first-child {
+        display: none !important;
+    }
+
+    /* AKTIVNÍ: Standardní liga (Neonově zelená) */
+    div[data-testid="stRadio"] > div[role="radiogroup"] > label:first-child[data-checked="true"] {
         background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%) !important;
         color: white !important;
-        font-weight: 700;
-        box-shadow: 0 0 15px rgba(34, 197, 94, 0.6);
+        font-weight: 700 !important;
+        box-shadow: 0 0 15px rgba(34, 197, 94, 0.5) !important;
     }
-    
-    /* WORLD CUP (Luxusní broušené zlato) */
-    div[data-testid="stRadio"] > div > label:last-child[data-checked="true"] {
+
+    /* AKTIVNÍ: World Cup (Zlatá) */
+    div[data-testid="stRadio"] > div[role="radiogroup"] > label:last-child[data-checked="true"] {
         background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #f59e0b 100%) !important;
         color: #000000 !important;
-        font-weight: 800;
-        box-shadow: 0 0 20px rgba(245, 158, 11, 0.7);
+        font-weight: 800 !important;
+        box-shadow: 0 0 20px rgba(245, 158, 11, 0.6) !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- INICIALIZACE SESSION STATE ---
 if "show_results" not in st.session_state: st.session_state.show_results = False
 if "ticket" not in st.session_state: st.session_state.ticket = []
 
-# =========================================================
-# ⚽ HLAVNÍ STRÁNKA APKY
-# =========================================================
-st.markdown("<h1 style='text-align: center; color: white;'>⚽ Value Bot v7.0 PRO</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: white;'>⚽ Value Bot v7.1 PRO</h1>", unsafe_allow_html=True)
 
-# --- THE MASTER SWITCHER ---
+# --- THE MASTER SWITCHER (Přidáno horizontal=True pro řádkové vykreslení) ---
 selected_mode = st.radio(
     label="Mód aplikace",
     options=["Standard Liga (1X2)", "🏆 World Cup Edition (Elo)"],
     label_visibility="collapsed",
+    horizontal=True,
     key="master_mode"
 )
 wc_mode = (selected_mode == "🏆 World Cup Edition (Elo)")
 
 if wc_mode:
     st.markdown("<h3 style='text-align: center; color: #fbbf24;'>🌍 Turnajový Mód Aktivní</h3>", unsafe_allow_html=True)
-    
-    # Pokud přepneme na WC, dynamicky přepíšeme barvy karet do zlata
     st.markdown("""
         <style>
-        [data-testid="stExpander"] { border: 2px solid rgba(245, 158, 11, 0.5) !important; box-shadow: 0 0 15px rgba(245, 158, 11, 0.1); }
+        [data-testid="stExpander"] { border: 2px solid rgba(245, 158, 11, 0.6) !important; box-shadow: 0 0 15px rgba(245, 158, 11, 0.1); }
+        div[data-testid="stRadio"] > div[role="radiogroup"] { border: 2px solid #f59e0b !important; }
         </style>
     """, unsafe_allow_html=True)
     
@@ -171,7 +177,6 @@ def save_bankroll(val):
     with open(BANKROLL_FILE, "w") as f:
         json.dump({"bankroll": val}, f)
 
-# --- 2. FUNKCE PRO ČÁRKY A TEČKY ---
 def smart_float_input(label, default_val, key):
     val_str = st.text_input(label, value=str(default_val), key=key)
     try: return float(val_str.replace(",", "."))
@@ -231,7 +236,7 @@ with st.sidebar:
         if st.button("🗑️ Vymazat celý tiket", use_container_width=True):
             st.session_state.ticket = []; st.rerun()
 
-# --- 3. FUNKCE PRO VSTUP DAT ---
+# --- VSTUPY A MATEMATIKA ---
 def match_history_input(team_label):
     data = {"gf": [], "ga": [], "xg": [], "xga": []}
     weights = [0.35, 0.25, 0.20, 0.13, 0.07]
@@ -249,38 +254,26 @@ def match_history_input(team_label):
         
         data["gf"].append(gf); data["ga"].append(ga); data["xg"].append(xg); data["xga"].append(xga)
         if i < 4: st.divider()
-            
     return {key: sum(val * w for val, w in zip(data[key], weights)) for key in data}
 
-# --- 4. AI KOMENTÁŘ ---
 def get_ai_commentary(p_home, p_draw, p_away, p_over, wc_mode, playoff_mode):
     t1 = "Tým A" if wc_mode else "Domácí"
     t2 = "Tým B" if wc_mode else "Hosté"
-    
     comments = []
     if p_home > 0.70: comments.append(f"🔥 {t1} je tady naprosto jasný favorit. Papírově by to měli přejet rozdílem třídy.")
-    elif p_home > 0.55: comments.append(f"🏠 {t1} má kvalitu na své straně a měli by to urvat.")
-    elif p_home > 0.45: comments.append(f"🏟️ {t1} má mírnou výhodu, ale žádná tutovka to není.")
-    elif p_away > 0.70: comments.append(f"🔥 {t2} je absolutní favorit, cokoliv jiného než výhra bude obrovský šok.")
-    elif p_away > 0.55: comments.append(f"🚀 {t2} má vyšší kvalitu a měl by zápas ovládnout.")
-    elif p_away > 0.45: comments.append(f"🚌 {t2} je lehkým favoritem, ale bude to boj.")
+    elif p_home > 0.55: comments.append(f"🏠 {t1} má kvalitu na své straně.")
+    elif p_home > 0.45: comments.append(f"🏟️ {t1} má mírnou výhodu.")
+    elif p_away > 0.70: comments.append(f"🔥 {t2} je absolutní favorit.")
+    elif p_away > 0.55: comments.append(f"🚀 {t2} má vyšší kvalitu.")
+    elif p_away > 0.45: comments.append(f"🚌 {t2} je lehkým favoritem.")
     elif p_draw > 0.33: 
-        if playoff_mode: comments.append("🤝 Tady to smrdí prodloužením. Taktická bitva a nikdo neudělá první chybu.")
-        else: comments.append("🤝 Tohle smrdí těžkou taktickou bitvou, remíza visí ve vzduchu.")
-    else: comments.append("⚖️ Brutálně vyrovnaný zápas. Tady může vyhrát úplně kdokoliv.")
-
-    if p_over > 0.60: comments.append("🥅 Model cítí ofenzivní hody, měly by padat góly.")
-    elif p_over < 0.40: 
-        if playoff_mode: comments.append("💤 Klasický turnajový beton v play-off. Očekávám hodně málo gólů.")
-        else: comments.append("💤 Žádnou divočinu nečekej, spíš underový zápas.")
+        if playoff_mode: comments.append("🤝 Tady to smrdí prodloužením.")
+        else: comments.append("🤝 Remíza visí ve vzduchu.")
+    else: comments.append("⚖️ Vyrovnaný zápas.")
     return " ".join(comments)
 
-# --- VSTUPNÍ FORMULÁŘ ---
 c_h, c_a = st.columns(2)
-rank_h = 15; rank_a = 45 # Defaultní hodnoty
-
-label_h = "Tým A" if wc_mode else "Domácí"
-label_a = "Tým B" if wc_mode else "Hosté"
+rank_h = 15; rank_a = 45
 
 with c_h:
     with st.expander(f"🏠 HISTORIE: {label_h.upper()}", expanded=True):
