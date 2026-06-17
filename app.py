@@ -21,12 +21,12 @@ st.markdown("""
     
     /* --- ZÁKLADNÍ POZADÍ (Černá + jemné fotbalové čáry) --- */
     .stApp {
-        background-color: #050505 !important; 
-        background-image: 
-            /* Jemný nákres středu hřiště v pozadí */
-            url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" opacity="0.04" stroke="%2322c55e" fill="none" stroke-width="0.5"><circle cx="50" cy="50" r="20"/><path d="M 0 50 L 100 50 M 50 0 L 50 100"/></svg>');
-        background-size: 50% 50%;
+        background-color: #050505 !important;
+        /* Vloží reálnou fotku temného stadionu s trávníkem a překryje ji tmavým filtrem, aby nerušila text */
+        background-image: linear-gradient(rgba(5, 5, 5, 0.85), rgba(5, 5, 5, 0.92)), url("https://images.unsplash.com/photo-1518605368461-1ee7c5320d7e?q=80&w=2000&auto=format&fit=crop");
+        background-size: cover;
         background-position: center;
+        background-attachment: fixed;
         color: #e6edf3;
     }
 
